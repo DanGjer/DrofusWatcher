@@ -1,0 +1,59 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ExtensionId>DrofusWatcher</ExtensionId>
+    <Authors>DBGJ</Authors>
+    <Version>0.0.1</Version>
+    <Title>DrofusWatcher</Title>
+    <Description>A tool </Description>
+    <PackageTags>Revit;Assistant;Extension</PackageTags>
+    <PackageIcon>Icon.png</PackageIcon>
+    <PackageIconUrl></PackageIconUrl>
+    <TargetFramework>net48</TargetFramework>
+        <!-- 
+    Adjust MainRevitVersion to get IntelliSense for the correct version do a 
+    dotnet restore to restore the correct nuget packages for the selected Revit version.
+    -->
+    <MainRevitVersion Condition="'$(Configuration)' == 'Debug'">2025</MainRevitVersion>
+  </PropertyGroup>
+
+  <Import Project=".\Configurations.targets" />
+
+  <PropertyGroup>
+    <LangVersion>12</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="Icon.png" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="dRofusClient" Version="1.0.11" />
+    <PackageReference Include="System.Text.Json" Version="9.0.3" />
+  </ItemGroup>
+  <!-- Added reference to System.Net.Http -->
+  <ItemGroup>
+    <Reference Include="System.Net.Http">
+      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Net.Http.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+  <Reference Include="RevitAPI">
+    <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPI.dll</HintPath>
+    <Private>false</Private>
+  </Reference>
+  <Reference Include="RevitAPIUI">
+    <HintPath>C:\Program Files\Autodesk\Revit 2025\RevitAPIUI.dll</HintPath>
+    <Private>false</Private>
+  </Reference>
+  </ItemGroup>
+
+    <ItemGroup>
+    
+    <PackageReference Include="dRofusClient.Revit.$(MainRevitVersion)" Version="1.0.11" />
+  </ItemGroup>
+
+
+</Project>
