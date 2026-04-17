@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
@@ -5,6 +6,10 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Media;
+using SolidColorBrush = System.Windows.Media.SolidColorBrush;
+using DataTemplate = System.Windows.DataTemplate;
+using FrameworkElementFactory = System.Windows.FrameworkElementFactory;
+using TextBlock = System.Windows.Controls.TextBlock;
 using WpfBinding = System.Windows.Data.Binding;
 using WpfColor = System.Windows.Media.Color;
 using WpfControl = System.Windows.Controls.Control;
@@ -18,6 +23,7 @@ public class SelectedSpacesWindow : Window
 {
     private readonly Action<RevitSpace>? _onSpaceSelected;
     private readonly Action<RevitSpace>? _onSpaceDoubleClick;
+    private readonly Action<IReadOnlyList<RevitSpace>>? _onCheckCompliance;
     private readonly IReadOnlyList<RevitSpace> _spaces;
     private readonly string _roomKeyRevit;
     private readonly ICollectionView _spacesView;
@@ -27,10 +33,12 @@ public class SelectedSpacesWindow : Window
         IReadOnlyList<RevitSpace> spaces,
         string roomKeyRevit,
         Action<RevitSpace>? onSpaceSelected = null,
-        Action<RevitSpace>? onSpaceDoubleClick = null)
+        Action<RevitSpace>? onSpaceDoubleClick = null,
+        Action<IReadOnlyList<RevitSpace>>? onCheckCompliance = null)
     {
         _onSpaceSelected = onSpaceSelected;
         _onSpaceDoubleClick = onSpaceDoubleClick;
+        _onCheckCompliance = onCheckCompliance;
         _spaces = spaces;
         _roomKeyRevit = roomKeyRevit;
         _spacesView = CollectionViewSource.GetDefaultView(_spaces);
@@ -91,6 +99,27 @@ public class SelectedSpacesWindow : Window
         titleStack.Children.Add(subtitleText);
         header.Children.Add(titleStack);
 
+        var actionsPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+
+        var checkComplianceButton = new Button
+        {
+            Content = "Check Compliance",
+            MinWidth = 130,
+            Height = 32,
+            Margin = new Thickness(8, 0, 0, 0),
+            Background = Brushes.White,
+            Foreground = accent,
+            BorderBrush = accent,
+            FontWeight = FontWeights.SemiBold,
+            Padding = new Thickness(14, 4, 14, 4)
+        };
+        checkComplianceButton.Click += (_, _) => RunComplianceCheck();
+        actionsPanel.Children.Add(checkComplianceButton);
+
         var closeButton = new Button
         {
             Content = "Close",
@@ -106,8 +135,10 @@ public class SelectedSpacesWindow : Window
             Padding = new Thickness(14, 4, 14, 4)
         };
         closeButton.Click += (_, _) => Close();
-        WpfGrid.SetColumn(closeButton, 1);
-        header.Children.Add(closeButton);
+        actionsPanel.Children.Add(closeButton);
+
+        WpfGrid.SetColumn(actionsPanel, 1);
+        header.Children.Add(actionsPanel);
 
         WpfGrid.SetRow(header, 0);
         shell.Children.Add(header);
@@ -217,24 +248,88 @@ public class SelectedSpacesWindow : Window
 
         grid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Element Id",
-            Binding = new WpfBinding(nameof(RevitSpace.IdValue)),
-            Width = new DataGridLength(1, DataGridLengthUnitType.Auto)
-        });
-
-        grid.Columns.Add(new DataGridTextColumn
-        {
-            Header = "State",
-            Binding = new WpfBinding(nameof(RevitSpace.State)),
-            Width = new DataGridLength(180, DataGridLengthUnitType.Auto)
+            Header = "Room Name",
+            Binding = new WpfBinding(nameof(RevitSpace.DrofusRoomNameDisplay)),
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star)
         });
 
         grid.Columns.Add(new DataGridTextColumn
         {
             Header = roomKeyRevit,
             Binding = new WpfBinding(nameof(RevitSpace.RevitRoomKeyValue)),
+            Width = new DataGridLength(120, DataGridLengthUnitType.Auto)
+        });
+
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Architect No",
+            Binding = new WpfBinding($"{nameof(RevitSpace.Rfp)}.{nameof(RfpData.ArchitectNo)}"),
+            Width = new DataGridLength(1, DataGridLengthUnitType.Auto)
+        });
+
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Normalkraft uttak",
+            Binding = new WpfBinding($"{nameof(RevitSpace.Rfp)}.{nameof(RfpData.NormalkraftUttak)}"),
             Width = new DataGridLength(1, DataGridLengthUnitType.Star)
         });
+
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Nødkraft uttak",
+            Binding = new WpfBinding($"{nameof(RevitSpace.Rfp)}.{nameof(RfpData.NodkraftUttak)}"),
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star)
+        });
+
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "UPS uttak",
+            Binding = new WpfBinding($"{nameof(RevitSpace.Rfp)}.{nameof(RfpData.UpsUttak)}"),
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star)
+        });
+
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "IKT uttak",
+            Binding = new WpfBinding($"{nameof(RevitSpace.Rfp)}.{nameof(RfpData.IktUttak)}"),
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star)
+        });
+
+        // Faktisk el uttak column with color coding
+        var elOutletColumnTemplate = new DataTemplate();
+        var elOutletFactory = new FrameworkElementFactory(typeof(TextBlock));
+        elOutletFactory.SetBinding(TextBlock.TextProperty, new WpfBinding(nameof(RevitSpace.ActualElectricalUttakDisplay)));
+        elOutletFactory.SetBinding(TextBlock.ForegroundProperty, new WpfBinding(nameof(RevitSpace.ElectricalOutletColorStatus))
+        {
+            Converter = new ColorStatusConverter()
+        });
+        elOutletColumnTemplate.VisualTree = elOutletFactory;
+
+        var elOutletColumn = new DataGridTemplateColumn
+        {
+            Header = "Faktisk el uttak",
+            CellTemplate = elOutletColumnTemplate,
+            Width = new DataGridLength(1, DataGridLengthUnitType.Auto)
+        };
+        grid.Columns.Add(elOutletColumn);
+
+        // Faktisk data uttak column with color coding
+        var dataOutletColumnTemplate = new DataTemplate();
+        var dataOutletFactory = new FrameworkElementFactory(typeof(TextBlock));
+        dataOutletFactory.SetBinding(TextBlock.TextProperty, new WpfBinding(nameof(RevitSpace.ActualDataUttakDisplay)));
+        dataOutletFactory.SetBinding(TextBlock.ForegroundProperty, new WpfBinding(nameof(RevitSpace.DataOutletColorStatus))
+        {
+            Converter = new ColorStatusConverter()
+        });
+        dataOutletColumnTemplate.VisualTree = dataOutletFactory;
+
+        var dataOutletColumn = new DataGridTemplateColumn
+        {
+            Header = "Faktisk data uttak",
+            CellTemplate = dataOutletColumnTemplate,
+            Width = new DataGridLength(1, DataGridLengthUnitType.Auto)
+        };
+        grid.Columns.Add(dataOutletColumn);
 
         gridContainer.Child = grid;
         WpfGrid.SetRow(gridContainer, 2);
@@ -292,7 +387,6 @@ public class SelectedSpacesWindow : Window
                 return true;
 
             return space.IdValue.ToString().Contains(filterText, StringComparison.OrdinalIgnoreCase)
-                || space.State.ToString().Contains(filterText, StringComparison.OrdinalIgnoreCase)
                 || (space.RevitRoomKeyValue?.Contains(filterText, StringComparison.OrdinalIgnoreCase) ?? false);
         };
 
@@ -303,7 +397,9 @@ public class SelectedSpacesWindow : Window
     private void OnGridSelectionChanged(DataGrid grid)
     {
         if (grid.SelectedItem is RevitSpace space)
+        {
             _onSpaceSelected?.Invoke(space);
+        }
 
         UpdateStatus();
     }
@@ -312,6 +408,13 @@ public class SelectedSpacesWindow : Window
     {
         if (grid.SelectedItem is RevitSpace space)
             _onSpaceDoubleClick?.Invoke(space);
+    }
+
+    private void RunComplianceCheck()
+    {
+        _onCheckCompliance?.Invoke(_spaces);
+        _spacesView.Refresh();
+        UpdateStatus();
     }
 
     public bool? ShowModal(IntPtr ownerHandle)
@@ -328,5 +431,26 @@ public class SelectedSpacesWindow : Window
     {
         var selectedCount = _spacesView.Cast<object>().Count();
         _statusText.Text = $"Showing {selectedCount} of {_spaces.Count} spaces";
+    }
+}
+
+public class ColorStatusConverter : System.Windows.Data.IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        var status = value as string;
+
+        return status switch
+        {
+            "Red" => new SolidColorBrush(WpfColor.FromRgb(220, 38, 38)),      // Red
+            "Green" => new SolidColorBrush(WpfColor.FromRgb(34, 197, 94)),    // Green
+            "Blue" => new SolidColorBrush(WpfColor.FromRgb(59, 130, 246)),    // Blue
+            _ => new SolidColorBrush(WpfColor.FromRgb(156, 163, 175))         // Gray (default)
+        };
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        throw new NotImplementedException();
     }
 }

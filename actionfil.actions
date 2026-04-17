@@ -1,0 +1,58 @@
+{
+  "Version": 4,
+  "ActionConfigs": [
+    {
+      "Id": "18043d75-b487-4d3b-b1bf-2b3471ed0305",
+      "IsChecked": true,
+      "Name": "Revit extension",
+      "Tasks": [
+        {
+          "TaskTypeId": "21160144-4eb3-43dd-8200-1ce7ae58e221",
+          "Input": {
+            "RoomKeyRevit": "BSN_RomNrFunk",
+            "RoomKeyDrofus": "room_func_no"
+          },
+          "Output": null,
+          "BrowserMode": 2,
+          "UseNugetBrowser": false,
+          "Package": null,
+          "AssemblyPath": null,
+          "Develop": {
+            "ProjectPath": "C:\\C#\\DrofusWatcher\\DrofusWatcher.csproj"
+          },
+          "Id": "219f018f-35bf-4dcd-8ee1-eecd1ccb2408",
+          "Disabled": false,
+          "GeneratedName": "DrofusWatcher",
+          "UserDefinedName": null,
+          "Condition": 0,
+          "TreatErrorsAsWarnings": false,
+          "Timeout": null,
+          "Logins": []
+        }
+      ],
+      "GroupId": "a91c88f1-0417-40b8-b794-8b6b52f90bcf",
+      "Variables": [],
+      "Retires": 0
+    }
+  ],
+  "SchedulingConfig": {
+    "Schedules": []
+  },
+  "ActionGroups": [
+    {
+      "Id": "a91c88f1-0417-40b8-b794-8b6b52f90bcf",
+      "Name": "Group 1",
+      "Variables": []
+    }
+  ],
+  "Variables": [
+    {
+      "Key": "Assistant:DisablePopupCloser",
+      "Value": "True"
+    }
+  ],
+  "Settings": {
+    "LogActionRuns": false
+  },
+  "RequiredLogins": []
+}
