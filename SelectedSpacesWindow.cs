@@ -43,7 +43,7 @@ public class SelectedSpacesWindow : Window
         _roomKeyRevit = roomKeyRevit;
         _spacesView = CollectionViewSource.GetDefaultView(_spaces);
 
-        Title = $"Selected MEP Spaces ({spaces.Count})";
+        Title = $"Valgte spaces ({spaces.Count})";
         Width = 860;
         Height = 580;
         MinWidth = 720;
@@ -57,6 +57,7 @@ public class SelectedSpacesWindow : Window
         var accent = new SolidColorBrush(WpfColor.FromRgb(0, 122, 204));
         var panel = new SolidColorBrush(WpfColor.FromRgb(255, 255, 255));
         var panelBorder = new SolidColorBrush(WpfColor.FromRgb(216, 224, 233));
+        var sectionDivider = new SolidColorBrush(WpfColor.FromRgb(204, 214, 224));
 
         var shell = new WpfGrid
         {
@@ -81,7 +82,7 @@ public class SelectedSpacesWindow : Window
 
         var titleText = new TextBlock
         {
-            Text = "Selected MEP Spaces",
+            Text = "Valgte spaces",
             FontSize = 21,
             FontWeight = FontWeights.SemiBold,
             Foreground = slate900
@@ -89,7 +90,7 @@ public class SelectedSpacesWindow : Window
 
         var subtitleText = new TextBlock
         {
-            Text = "Single-click selects in Revit. Double-click zooms to the space.",
+            Text = "Enkelt klikk velger i Revit. Dobbeltklikk zoomer inn på rommet.",
             Margin = new Thickness(0, 2, 0, 0),
             FontSize = 12,
             Foreground = slate700
@@ -107,7 +108,7 @@ public class SelectedSpacesWindow : Window
 
         var checkComplianceButton = new Button
         {
-            Content = "Check Compliance",
+            Content = "Sjekk samsvar",
             MinWidth = 130,
             Height = 32,
             Margin = new Thickness(8, 0, 0, 0),
@@ -122,7 +123,7 @@ public class SelectedSpacesWindow : Window
 
         var closeButton = new Button
         {
-            Content = "Close",
+            Content = "Lukk",
             MinWidth = 90,
             Height = 32,
             Margin = new Thickness(8, 0, 0, 0),
@@ -178,7 +179,7 @@ public class SelectedSpacesWindow : Window
             BorderThickness = new Thickness(1),
             Padding = new Thickness(8, 2, 8, 2),
             Text = string.Empty,
-            ToolTip = $"Type Element Id, {roomKeyRevit}, or State"
+            ToolTip = $"Skriv Element ID, {roomKeyRevit}, eller Status"
         };
         searchBox.TextChanged += (_, _) => ApplyFilter(searchBox.Text);
 
@@ -246,9 +247,17 @@ public class SelectedSpacesWindow : Window
 
         grid.RowStyle = rowStyle;
 
+        var actualColumnHeaderStyle = new Style(typeof(WpfDataGridColumnHeader), grid.ColumnHeaderStyle);
+        actualColumnHeaderStyle.Setters.Add(new Setter(WpfControl.BorderBrushProperty, sectionDivider));
+        actualColumnHeaderStyle.Setters.Add(new Setter(WpfControl.BorderThicknessProperty, new Thickness(2, 0, 0, 1)));
+
+        var actualColumnCellStyle = new Style(typeof(DataGridCell));
+        actualColumnCellStyle.Setters.Add(new Setter(WpfControl.BorderBrushProperty, sectionDivider));
+        actualColumnCellStyle.Setters.Add(new Setter(WpfControl.BorderThicknessProperty, new Thickness(2, 0, 0, 0)));
+
         grid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Room Name",
+            Header = "Romnavn",
             Binding = new WpfBinding(nameof(RevitSpace.DrofusRoomNameDisplay)),
             Width = new DataGridLength(1, DataGridLengthUnitType.Star)
         });
@@ -262,35 +271,35 @@ public class SelectedSpacesWindow : Window
 
         grid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Architect No",
+            Header = "Romnr",
             Binding = new WpfBinding($"{nameof(RevitSpace.Rfp)}.{nameof(RfpData.ArchitectNo)}"),
             Width = new DataGridLength(1, DataGridLengthUnitType.Auto)
         });
 
         grid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Normalkraft uttak",
+            Header = "Normal",
             Binding = new WpfBinding($"{nameof(RevitSpace.Rfp)}.{nameof(RfpData.NormalkraftUttak)}"),
             Width = new DataGridLength(1, DataGridLengthUnitType.Star)
         });
 
         grid.Columns.Add(new DataGridTextColumn
         {
-            Header = "Nødkraft uttak",
+            Header = "Nød",
             Binding = new WpfBinding($"{nameof(RevitSpace.Rfp)}.{nameof(RfpData.NodkraftUttak)}"),
             Width = new DataGridLength(1, DataGridLengthUnitType.Star)
         });
 
         grid.Columns.Add(new DataGridTextColumn
         {
-            Header = "UPS uttak",
+            Header = "UPS",
             Binding = new WpfBinding($"{nameof(RevitSpace.Rfp)}.{nameof(RfpData.UpsUttak)}"),
             Width = new DataGridLength(1, DataGridLengthUnitType.Star)
         });
 
         grid.Columns.Add(new DataGridTextColumn
         {
-            Header = "IKT uttak",
+            Header = "IKT",
             Binding = new WpfBinding($"{nameof(RevitSpace.Rfp)}.{nameof(RfpData.IktUttak)}"),
             Width = new DataGridLength(1, DataGridLengthUnitType.Star)
         });
@@ -307,8 +316,10 @@ public class SelectedSpacesWindow : Window
 
         var elOutletColumn = new DataGridTemplateColumn
         {
-            Header = "Faktisk el uttak",
+            Header = "Revit el-uttak",
             CellTemplate = elOutletColumnTemplate,
+            HeaderStyle = actualColumnHeaderStyle,
+            CellStyle = actualColumnCellStyle,
             Width = new DataGridLength(1, DataGridLengthUnitType.Auto)
         };
         grid.Columns.Add(elOutletColumn);
@@ -325,7 +336,7 @@ public class SelectedSpacesWindow : Window
 
         var dataOutletColumn = new DataGridTemplateColumn
         {
-            Header = "Faktisk data uttak",
+            Header = "Revit IKT-uttak",
             CellTemplate = dataOutletColumnTemplate,
             Width = new DataGridLength(1, DataGridLengthUnitType.Auto)
         };
@@ -358,7 +369,7 @@ public class SelectedSpacesWindow : Window
 
         var hintText = new TextBlock
         {
-            Text = "Tip: Double-click a row to zoom in Revit",
+            Text = "Tips: Dobbeltklikk på en rad for å zoome inn i Revit",
             Foreground = slate700,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -430,7 +441,7 @@ public class SelectedSpacesWindow : Window
     private void UpdateStatus()
     {
         var selectedCount = _spacesView.Cast<object>().Count();
-        _statusText.Text = $"Showing {selectedCount} of {_spaces.Count} spaces";
+        _statusText.Text = $"Viser {selectedCount} av {_spaces.Count} rom";
     }
 }
 

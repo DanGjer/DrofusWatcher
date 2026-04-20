@@ -68,3 +68,16 @@ The response format typically looks like this:
 ]
 ```
 
+7. Other examples of queries:
+
+```csharp
+ var roomsQuery = Query.List()
+                    .Select("id", args.RoomKeyDrofus, "name", "architect_no",
+                        "room_data_20101610",
+                        "room_data_20102210",
+                        "room_data_20102310",
+                        "room_data_21101010")
+                    .Filter(Filter.In(args.RoomKeyDrofus, lookupKeys));
+
+  rooms = client.GetRooms(roomsQuery).ToList();
+```

@@ -10,7 +10,8 @@
           "TaskTypeId": "21160144-4eb3-43dd-8200-1ce7ae58e221",
           "Input": {
             "RoomKeyRevit": "BSN_RomNrFunk",
-            "RoomKeyDrofus": "room_func_no"
+            "RoomKeyDrofus": "room_func_no",
+            "SpaceCatchOffsetMm": "100"
           },
           "Output": null,
           "BrowserMode": 2,

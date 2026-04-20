@@ -10,10 +10,10 @@ public class DrofusWatcherCommand : IRevitExtension<AssistantArgs>
         var document = uiDocument?.Document;
 
         if (document is null)
-            return Result.Text.Failed("Revit has no active model open");
+            return Result.Text.Failed("Revit har ingen aktivt modell åpent");
 
         if (string.IsNullOrWhiteSpace(args.RoomKeyRevit))
-            return Result.Text.Failed("RoomKeyRevit must be provided.");
+            return Result.Text.Failed("RoomKeyRevit må angis.");
 
         try
         {
@@ -21,8 +21,8 @@ public class DrofusWatcherCommand : IRevitExtension<AssistantArgs>
 
             if (selectedSpaces.Count == 0)
             {
-                TaskDialog.Show("Selected Spaces", "No MEP Spaces are selected.");
-                return Result.Text.Succeeded("No MEP Spaces are selected.");
+                TaskDialog.Show("Valgte rom", "Ingen spaces er valgt.");
+                return Result.Text.Succeeded("Ingen spaces er valgt.");
             }
 
             var validSpaces = selectedSpaces
@@ -37,8 +37,8 @@ public class DrofusWatcherCommand : IRevitExtension<AssistantArgs>
 
             if (lookupKeys.Count == 0)
             {
-                var message = $"No valid values found for Revit parameter '{args.RoomKeyRevit}' on selected spaces.";
-                TaskDialog.Show("Selected Spaces", message);
+                var message = $"Ingen gyldige verdier funnet for Revit-parameter '{args.RoomKeyRevit}' på valgte rom.";
+                TaskDialog.Show("Valgte rom", message);
                 return Result.Text.Succeeded(message);
             }
 
@@ -130,7 +130,10 @@ public class DrofusWatcherCommand : IRevitExtension<AssistantArgs>
                 },
                 spacesToEvaluate =>
                 {
-                    var complianceResults = Compliance.EvaluateSelectedSpaces(document, spacesToEvaluate);
+                    var complianceResults = Compliance.EvaluateSelectedSpaces(
+                        document,
+                        spacesToEvaluate,
+                        args.SpaceCatchOffsetMm);
                     foreach (var result in complianceResults)
                     {
                         result.Space.ActualElectricalUttak = result.Counts.TotalElectricalUttak;
@@ -144,11 +147,11 @@ public class DrofusWatcherCommand : IRevitExtension<AssistantArgs>
 
 
 
-            return Result.Text.Succeeded($"Displayed {selectedSpaces.Count} selected MEP spaces.");
+            return Result.Text.Succeeded($"Viste {selectedSpaces.Count} valgte spaces.");
         }
         catch (Exception ex)
         {
-            return Result.Text.Failed($"Error retrieving rooms from dRofus: {ex.Message}");
+            return Result.Text.Failed($"Feil ved henting av rom fra dRofus: {ex.Message}");
         }
     }
 }

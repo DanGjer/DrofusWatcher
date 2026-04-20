@@ -109,7 +109,8 @@ public static class Compliance
 
     public static IReadOnlyList<SpaceComplianceResult> EvaluateSelectedSpaces(
         Document document,
-        IEnumerable<RevitSpace> selectedSpaces)
+        IEnumerable<RevitSpace> selectedSpaces,
+        double spaceCatchOffsetMm = 0)
     {
         if (document is null || selectedSpaces is null)
             return Array.Empty<SpaceComplianceResult>();
@@ -138,6 +139,15 @@ public static class Compliance
             }
         }
 
+        var selectedSpaceElements = selected
+            .Select(s => document.GetElement(s.Id))
+            .OfType<Space>()
+            .ToList();
+
+        var geometryCatchOffsetInternal = spaceCatchOffsetMm > 0
+            ? UnitUtils.ConvertToInternalUnits(spaceCatchOffsetMm, UnitTypeId.Millimeters)
+            : 0;
+
         var phasesLatestFirst = new FilteredElementCollector(document)
             .OfClass(typeof(Phase))
             .Cast<Phase>()
@@ -161,6 +171,12 @@ public static class Compliance
         foreach (var instance in instances)
         {
             var ownerSpace = GetOwningSpaceLatestFirst(instance, phasesLatestFirst);
+            if ((ownerSpace is null || !bySpaceId.ContainsKey(ownerSpace.Id.Value))
+                && geometryCatchOffsetInternal > 0)
+            {
+                ownerSpace = GetOwningSpaceByGeometry(instance, selectedSpaceElements, geometryCatchOffsetInternal);
+            }
+
             if (ownerSpace is null)
                 continue;
 
@@ -270,6 +286,84 @@ public static class Compliance
             return 0;
 
         return ParseParameterAsInt(typeElement.LookupParameter(parameterName));
+    }
+
+    private static Space? GetOwningSpaceByGeometry(
+        FamilyInstance instance,
+        IReadOnlyList<Space> candidateSpaces,
+        double offset)
+    {
+        if (instance is null || candidateSpaces is null || candidateSpaces.Count == 0)
+            return null;
+
+        var basePoint = GetReferencePoint(instance);
+        if (basePoint is null)
+            return null;
+
+        var pointsToTest = BuildSamplePoints(basePoint, offset);
+
+        for (var i = 0; i < candidateSpaces.Count; i++)
+        {
+            var space = candidateSpaces[i];
+            for (var j = 0; j < pointsToTest.Count; j++)
+            {
+                try
+                {
+                    if (space.IsPointInSpace(pointsToTest[j]))
+                        return space;
+                }
+                catch
+                {
+                    // Some spaces can throw for geometric checks; ignore and continue.
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static XYZ? GetReferencePoint(FamilyInstance instance)
+    {
+        if (instance.Location is LocationPoint locationPoint)
+            return locationPoint.Point;
+
+        if (instance.Location is LocationCurve locationCurve)
+        {
+            var curve = locationCurve.Curve;
+            if (curve is not null)
+                return curve.Evaluate(0.5, true);
+        }
+
+        var boundingBox = instance.get_BoundingBox(null);
+        if (boundingBox is null)
+            return null;
+
+        return (boundingBox.Min + boundingBox.Max) * 0.5;
+    }
+
+    private static List<XYZ> BuildSamplePoints(XYZ point, double offset)
+    {
+        var points = new List<XYZ> { point };
+
+        if (offset <= 0)
+            return points;
+
+        var offsets = new[]
+        {
+            new XYZ(offset, 0, 0),
+            new XYZ(-offset, 0, 0),
+            new XYZ(0, offset, 0),
+            new XYZ(0, -offset, 0),
+            new XYZ(offset, offset, 0),
+            new XYZ(offset, -offset, 0),
+            new XYZ(-offset, offset, 0),
+            new XYZ(-offset, -offset, 0)
+        };
+
+        for (var i = 0; i < offsets.Length; i++)
+            points.Add(point + offsets[i]);
+
+        return points;
     }
 
     private static int ParseParameterAsInt(Parameter? parameter)
